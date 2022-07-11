@@ -1,4 +1,5 @@
-markupsafe==2.0.1
-Flask~=1.1.2
-ordered-set~=4.0.2
-requests~=2.24.0
+click==7.1.2
+Flask==1.1.4
+ordered_set==4.0.2
+requests==2.25.1
+Werkzeug==1.0.1
