@@ -35,6 +35,8 @@ class Submitter:
     FAUST_TY  = 'faust'
     CCIT_TY   = 'ccit'
     ENOWAR_TY = 'enowar'
+    HTTP_C_TY = 'custom-nc'
+    NC_C_TY   = 'custom-http'
     
     SUB_ACCEPTED      = 'accepted'
     SUB_INVALID       = 'invalid'
@@ -44,8 +46,9 @@ class Submitter:
     SUB_NOP           = 'from NOP team'
     SUB_NOT_AVAILABLE = 'is not available'
         
-    def __init__(self, sub_type):
-        sub_type_implemented = [self.FAUST_TY, self.CCIT_TY, self.ENOWAR_TY]
+    def __init__(self, sub_type, keywords={}):
+        sub_type_implemented = [self.FAUST_TY, self.CCIT_TY, self.ENOWAR_TY, self.HTTP_C_TY, self.NC_C_TY]
+        self.keywords = keywords
         if sub_type not in sub_type_implemented:
             raise NotImplementedError()
         
@@ -84,16 +87,31 @@ class Submitter:
             
         elif sub_type == self.ENOWAR_TY:
             # init submitter keywords
-            self.SUB_ACCEPTED = 'OK'
-            self.SUB_INVALID = 'INV'
-            self.SUB_OLD = 'OLD'
-            self.SUB_YOUR_OWN = 'OWN'
-            self.SUB_STOLEN = 'DUP'
-            self.SUB_NOP = 'INV'
+            self.SUB_ACCEPTED      = 'OK'
+            self.SUB_INVALID       = 'INV'
+            self.SUB_OLD           = 'OLD'
+            self.SUB_YOUR_OWN      = 'OWN'
+            self.SUB_STOLEN        = 'DUP'
+            self.SUB_NOP           = 'INV'
             self.SUB_NOT_AVAILABLE = 'ERR'
             # select submit function
             self.submit_fn = _netcat_submitter
-              
+            
+        elif sub_type == self.NC_C_TY or ub_type == self.HTTP_C_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = self.keywords['SUB_ACCEPTED']
+            self.SUB_INVALID       = self.keywords['SUB_INVALID']
+            self.SUB_OLD           = self.keywords['SUB_OLD']
+            self.SUB_YOUR_OWN      = self.keywords['SUB_YOUR_OWN']
+            self.SUB_STOLEN        = self.keywords['SUB_STOLEN']
+            self.SUB_NOP           = self.keywords['SUB_NOP']
+            self.SUB_NOT_AVAILABLE = self.keywords['SUB_NOT_AVAILABLE']
+            
+            # select submit function
+            self.submit_fn = _http_submitter
+            if sub_type == self.NC_C_TY:
+                self.submit_fn = _netcat_submitter
+            
     def submit(self, flags):
         return self.submit_fn(self, flags)
     
@@ -165,9 +183,10 @@ def loop(app: Flask):
                     for _ in range(min(current_app.config['SUB_PAYLOAD_SIZE'], queue_length)):
                         flags.append(queue.get())
 
-                    
-                    submit_result = submit(flags)
-
+                    if 'custom' in current_app.config['SUB_TYPE']:
+                        submit_result = submit(flags, keywords=current_app.config['CUSTOM_KEYWORDS'])
+                    else:
+                        submit_result = submit(flags)
                     # executemany() would be better, but it's fine like this.
                     for item in submit_result:
                         if (submitter.SUB_INVALID.lower() in item['msg'].lower() or

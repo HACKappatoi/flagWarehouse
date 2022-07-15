@@ -17,15 +17,19 @@ class Config(object):
     SUB_PAYLOAD_SIZE = 100
     SUB_URL = 'tcp://10.0.13.37:1337' # 'http://10.1.0.2/flags' 'tcp://submission.faustctf.net:666/'
 
-    SUB_TYPE = 'enowar' # enowar | faust | ccit | custom 
+    SUB_TYPE = 'enowar' # enowar | faust | ccit | custom-http | custom-nc 
     
-    SUB_ACCEPTED = 'accepted'
-    SUB_INVALID = 'invalid'
-    SUB_OLD = 'too old'
-    SUB_YOUR_OWN = 'your own'
-    SUB_STOLEN = 'already stolen'
-    SUB_NOP = 'from NOP team'
-    SUB_NOT_AVAILABLE = 'is not available'
+    ## for customs sub type
+    CUSTOM_KEYWORDS = {
+    'SUB_ACCEPTED'     : 'accepted',
+    'SUB_INVALID'      : 'invalid',
+    'SUB_OLD'          : 'too old',
+    'SUB_YOUR_OWN'     : 'your own',
+    'SUB_STOLEN'       : 'already stolen',
+    'SUB_NOP'          : 'from NOP team',
+    'SUB_NOT_AVAILABLE': 'is not available'
+    }
+  
 
     # Don't worry about this
     DB_NSUB = 'NOT_SUBMITTED'
