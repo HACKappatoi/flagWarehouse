@@ -113,6 +113,7 @@ class Submitter:
                 self.submit_fn = _netcat_submitter
             
     def submit(self, flags):
+    	# [{'flag':'<flag>','msg':'<server response msg>'},{...},...]
         return self.submit_fn(self, flags)
     
     def _netcat_submitter(self, flags):
