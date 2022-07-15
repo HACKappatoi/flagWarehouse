@@ -3,7 +3,7 @@ class Config(object):
     API_TOKEN = 'token'
 
     YOUR_TEAM = '10.60.27.1'
-    TEAM_TOKEN = '8a8d25f465bec01d'
+    TEAM_TOKEN = ' # team token for flag submission
     TEAMS = ['10.60.{}.1'.format(i) for i in range(1, 35)]
     TEAMS.remove(YOUR_TEAM)
 
