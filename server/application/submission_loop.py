@@ -38,6 +38,8 @@ class Submitter:
     HTTP_C_TY = 'custom-nc'
     NC_C_TY   = 'custom-http'
     
+    CUSTOM_SUBMITTER_FUNCTION = None
+    
     SUB_ACCEPTED      = 'accepted'
     SUB_INVALID       = 'invalid'
     SUB_OLD           = 'too old'
@@ -46,9 +48,10 @@ class Submitter:
     SUB_NOP           = 'from NOP team'
     SUB_NOT_AVAILABLE = 'is not available'
         
-    def __init__(self, sub_type, keywords={}):
+    def __init__(self, sub_type, sub_fun=None ,keywords={}):
         sub_type_implemented = [self.FAUST_TY, self.CCIT_TY, self.ENOWAR_TY, self.HTTP_C_TY, self.NC_C_TY]
         self.keywords = keywords
+        self.CUSTOM_SUBMITTER_FUNCTION = sub_fun
         if sub_type not in sub_type_implemented:
             raise NotImplementedError()
         
@@ -108,9 +111,14 @@ class Submitter:
             self.SUB_NOT_AVAILABLE = self.keywords['SUB_NOT_AVAILABLE']
             
             # select submit function
+            self.submit_fn = self.CUSTOM_SUBMITTER_FUNCTION
+            if self.CUSTOM_SUBMITTER_FUNCTION is not None:
+                return 
+            	
             self.submit_fn = _http_submitter
             if sub_type == self.NC_C_TY:
                 self.submit_fn = _netcat_submitter
+            
             
     def submit(self, flags):
     	# [{'flag':'<flag>','msg':'<server response msg>'},{...},...]
@@ -160,7 +168,7 @@ def loop(app: Flask):
         database = db.get_db()
         queue = OrderedSetQueue()
         
-        submitter = Submitter(current_app.config['SUB_TYPE']))
+        submitter = Submitter(current_app.config['SUB_TYPE'])
         
         while True:
             s_time = time.time()
@@ -185,7 +193,7 @@ def loop(app: Flask):
                         flags.append(queue.get())
 
                     if 'custom' in current_app.config['SUB_TYPE']:
-                        submit_result = submit(flags, keywords=current_app.config['CUSTOM_KEYWORDS'])
+                        submit_result = submit(flags, sub_fun=current_app.config['CUSTOM_SUBMITTER_FUNCTION']  ,keywords=current_app.config['CUSTOM_KEYWORDS'])
                     else:
                         submit_result = submit(flags)
                     # executemany() would be better, but it's fine like this.

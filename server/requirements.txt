@@ -3,3 +3,6 @@ Flask==1.1.4
 ordered_set==4.0.2
 requests==2.25.1
 Werkzeug==1.0.1
+markupsafe==2.0.1
+
+

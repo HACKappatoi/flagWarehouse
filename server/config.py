@@ -3,7 +3,7 @@ class Config(object):
     API_TOKEN = 'token'
 
     YOUR_TEAM = '10.60.27.1'
-    TEAM_TOKEN = ' # team token for flag submission
+    TEAM_TOKEN = '' # team token for flag submission
     TEAMS = ['10.60.{}.1'.format(i) for i in range(1, 35)]
     TEAMS.remove(YOUR_TEAM)
 
@@ -29,7 +29,7 @@ class Config(object):
     'SUB_NOP'          : 'from NOP team',
     'SUB_NOT_AVAILABLE': 'is not available'
     }
-  
+    CUSTOM_SUBMITTER_FUNCTION = None
 
     # Don't worry about this
     DB_NSUB = 'NOT_SUBMITTED'
