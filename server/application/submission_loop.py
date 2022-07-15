@@ -10,6 +10,8 @@ from ordered_set import OrderedSet
 
 from . import db
 
+import pwn
+import urllib.parse
 
 class OrderedSetQueue(Queue):
     """Unique queue.
@@ -28,6 +30,108 @@ class OrderedSetQueue(Queue):
         return self.queue.pop()
 
 
+
+class Submitter:
+    FAUST_TY  = 'faust'
+    CCIT_TY   = 'ccit'
+    ENOWAR_TY = 'enowar'
+    
+    SUB_ACCEPTED      = 'accepted'
+    SUB_INVALID       = 'invalid'
+    SUB_OLD           = 'too old'
+    SUB_YOUR_OWN      = 'your own'
+    SUB_STOLEN        = 'already stolen'
+    SUB_NOP           = 'from NOP team'
+    SUB_NOT_AVAILABLE = 'is not available'
+        
+    def __init__(self, sub_type):
+        sub_type_implemented = [self.FAUST_TY, self.CCIT_TY, self.ENOWAR_TY]
+        if sub_type not in sub_type_implemented:
+            raise NotImplementedError()
+        
+        if sub_type == self.FAUST_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = 'OK'
+            self.SUB_INVALID       = 'INV'
+            self.SUB_OLD           = 'OLD'
+            self.SUB_YOUR_OWN      = 'OWN'
+            self.SUB_STOLEN        = 'DUP'
+            self.SUB_NOP           = 'INV'
+            self.SUB_NOT_AVAILABLE = 'ERR' 
+            
+            # init submitter data
+            self.submitter_url = urllib.parse.urlsplit(current_app.config['SUB_URL'])
+            self.host = url.hostname
+            self.port = url.port
+            current_app.logger.info(f'{self.host}, {self.port}')  
+            
+            # select submit function
+            self.submit_fn = _netcat_submitter
+        
+        elif sub_type == self.CCIT_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = 'accepted'
+            self.SUB_INVALID       = 'invalid'
+            self.SUB_OLD           = 'too old'
+            self.SUB_YOUR_OWN      = 'your own'
+            self.SUB_STOLEN        = 'already stolen'
+            self.SUB_NOP           = 'from NOP team'
+            self.SUB_NOT_AVAILABLE = 'is not available'
+            
+            # select submit function
+            self.submit_fn = _http_submitter
+            
+            
+        elif sub_type == self.ENOWAR_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED = 'OK'
+            self.SUB_INVALID = 'INV'
+            self.SUB_OLD = 'OLD'
+            self.SUB_YOUR_OWN = 'OWN'
+            self.SUB_STOLEN = 'DUP'
+            self.SUB_NOP = 'INV'
+            self.SUB_NOT_AVAILABLE = 'ERR'
+            # select submit function
+            self.submit_fn = _netcat_submitter
+              
+    def submit(self, flags):
+        return self.submit_fn(self, flags)
+    
+    def _netcat_submitter(self, flags):
+        try:
+            sub = pwn.remote(self.host, self.port, timeout=current_app.config['SUB_TIMEOUT'])
+            while sub.recv(1,timeout=1):
+                continue
+            res = []
+            for flag in flags:
+                sub.sendline(flag.encode())
+                sub_res = sub.recvlineS().split()
+                
+                if len(sub_res) < 1 or sub_res[0] not in flags:
+                    print(f'[_netcat_submitter]: {sub_res}')
+                    continue
+                res.append({'flag':sub_res[0], 'msg':sub_line[1]})
+            return res
+        
+        except Exception as ex:
+            print(ex)
+            return []
+    
+    def _http_submitter(self, flags):
+        res = requests.put(current_app.config['SUB_URL'],
+                            headers={'X-Team-Token': current_app.config['TEAM_TOKEN']},
+                            json=flags,
+                            timeout=(current_app.config['SUB_INTERVAL'] / current_app.config['SUB_LIMIT']))
+
+        # Check if the gameserver sent a response about the flags or if it sent an error
+        if res.headers['Content-Type'] == 'application/json; charset=utf-8':
+            return json.loads(res.text)
+        else:
+            current_app.logger.error(f'Received this response from the gameserver:\n\n{res.text}\n')
+            return []    
+    
+    
+    
 def loop(app: Flask):
     with app.app_context():
         logger = current_app.logger  # Need to get it before sleep, otherwise it doesn't work. Don't know why.
@@ -36,6 +140,9 @@ def loop(app: Flask):
         logger.info('starting.')
         database = db.get_db()
         queue = OrderedSetQueue()
+        
+        submitter = Submitter(current_app.config['SUB_TYPE']))
+        
         while True:
             s_time = time.time()
             expiration_time = (datetime.now() - timedelta(seconds=current_app.config['FLAG_ALIVE'])).replace(microsecond=0).isoformat(sep=' ')
@@ -58,37 +165,27 @@ def loop(app: Flask):
                     for _ in range(min(current_app.config['SUB_PAYLOAD_SIZE'], queue_length)):
                         flags.append(queue.get())
 
-                    res = requests.put(current_app.config['SUB_URL'],
-                                       headers={'X-Team-Token': current_app.config['TEAM_TOKEN']},
-                                       json=flags,
-                                       timeout=(current_app.config['SUB_INTERVAL'] / current_app.config['SUB_LIMIT']))
-                    j_res = []
-
-                    # Check if the gameserver sent a response about the flags or if it sent an error
-                    if res.headers['Content-Type'] == 'application/json; charset=utf-8':
-                        j_res = json.loads(res.text)
-                    else:
-                        logger.error(f'Received this response from the gameserver:\n\n{res.text}\n')
-                        continue
+                    
+                    submit_result = submit(flags)
 
                     # executemany() would be better, but it's fine like this.
-                    for item in j_res:
-                        if (current_app.config['SUB_INVALID'].lower() in item['msg'].lower() or
-                                current_app.config['SUB_YOUR_OWN'].lower() in item['msg'].lower() or
-                                current_app.config['SUB_STOLEN'].lower() in item['msg'].lower() or
-                                current_app.config['SUB_NOP'].lower() in item['msg'].lower()):
+                    for item in submit_result:
+                        if (submitter.SUB_INVALID.lower() in item['msg'].lower() or
+                                submitter.SUB_YOUR_OWN.lower() in item['msg'].lower() or
+                                submitter.SUB_STOLEN.lower() in item['msg'].lower() or
+                                submitter.SUB_NOP.lower() in item['msg'].lower()):
                             cursor.execute('''
                             UPDATE flags
                             SET status = ?, server_response = ?
                             WHERE flag = ?
                             ''', (current_app.config['DB_SUB'], current_app.config['DB_ERR'], item['flag']))
-                        elif current_app.config['SUB_OLD'].lower() in item['msg'].lower():
+                        elif submitter.SUB_OLD.lower() in item['msg'].lower():
                             cursor.execute('''
                             UPDATE flags
                             SET status = ?, server_response = ?
                             WHERE flag = ?
                             ''', (current_app.config['DB_SUB'], current_app.config['DB_EXP'], item['flag']))
-                        elif current_app.config['SUB_ACCEPTED'].lower() in item['msg'].lower():
+                        elif submitter.SUB_ACCEPTED.lower() in item['msg'].lower():
                             cursor.execute('''
                             UPDATE flags
                             SET status = ?, server_response = ?

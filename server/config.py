@@ -13,9 +13,12 @@ class Config(object):
 
     SUB_LIMIT = 1
     SUB_INTERVAL = 5
+    SUB_TIMEOUT = SUB_INTERVAL / SUB_LIMIT
     SUB_PAYLOAD_SIZE = 100
-    SUB_URL = 'http://10.1.0.2/flags'
+    SUB_URL = 'tcp://10.0.13.37:1337' # 'http://10.1.0.2/flags' 'tcp://submission.faustctf.net:666/'
 
+    SUB_TYPE = 'enowar' # enowar | faust | ccit | custom 
+    
     SUB_ACCEPTED = 'accepted'
     SUB_INVALID = 'invalid'
     SUB_OLD = 'too old'
