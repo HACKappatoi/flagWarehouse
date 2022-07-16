@@ -135,7 +135,7 @@ class Submitter:
             # select submit function
             self.submit_fn = self.netcat_submitter
             
-        elif sub_type == self.NC_C_TY or ub_type == self.HTTP_C_TY:
+        elif sub_type == self.NC_C_TY or sub_type == self.HTTP_C_TY:
             # init submitter keywords
             self.SUB_ACCEPTED      = self.keywords['SUB_ACCEPTED']
             self.SUB_INVALID       = self.keywords['SUB_INVALID']
@@ -175,7 +175,7 @@ def loop(app: Flask):
         database = db.get_db()
         queue = OrderedSetQueue()
         
-        submitter = Submitter(current_app.config, current_app.config['SUB_TYPE'])
+        submitter = Submitter(current_app.config, current_app.config['SUB_TYPE'], sub_fun=current_app.config['CUSTOM_SUBMITTER_FUNCTION']  ,keywords=current_app.config['CUSTOM_KEYWORDS'])
         
         logger.info('submitter-class ok')
         
@@ -203,10 +203,8 @@ def loop(app: Flask):
                         flags.append(queue.get())
                     print(flags)
                     
-                    if 'custom' in current_app.config['SUB_TYPE']:
-                        submit_result = submitter.submit(flags, sub_fun=current_app.config['CUSTOM_SUBMITTER_FUNCTION']  ,keywords=current_app.config['CUSTOM_KEYWORDS'])
-                    else:
-                        submit_result = submitter.submit(flags)
+ 
+                    submit_result = submitter.submit(flags)
                     # executemany() would be better, but it's fine like this.
                     for item in submit_result:
                         if (submitter.SUB_INVALID.lower() in item['msg'].lower() or
