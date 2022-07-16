@@ -10,7 +10,7 @@ from ordered_set import OrderedSet
 
 from . import db
 
-import pwn
+from pwnlib.tubes.remote import remote
 import urllib.parse
 
 class OrderedSetQueue(Queue):
@@ -47,86 +47,12 @@ class Submitter:
     SUB_STOLEN        = 'already stolen'
     SUB_NOP           = 'from NOP team'
     SUB_NOT_AVAILABLE = 'is not available'
-        
-    def __init__(self, sub_type, sub_fun=None ,keywords={}):
-        sub_type_implemented = [self.FAUST_TY, self.CCIT_TY, self.ENOWAR_TY, self.HTTP_C_TY, self.NC_C_TY]
-        self.keywords = keywords
-        self.CUSTOM_SUBMITTER_FUNCTION = sub_fun
-        if sub_type not in sub_type_implemented:
-            raise NotImplementedError()
-        
-        if sub_type == self.FAUST_TY:
-            # init submitter keywords
-            self.SUB_ACCEPTED      = 'OK'
-            self.SUB_INVALID       = 'INV'
-            self.SUB_OLD           = 'OLD'
-            self.SUB_YOUR_OWN      = 'OWN'
-            self.SUB_STOLEN        = 'DUP'
-            self.SUB_NOP           = 'INV'
-            self.SUB_NOT_AVAILABLE = 'ERR' 
-            
-            # init submitter data
-            self.submitter_url = urllib.parse.urlsplit(current_app.config['SUB_URL'])
-            self.host = url.hostname
-            self.port = url.port
-            current_app.logger.info(f'{self.host}, {self.port}')  
-            
-            # select submit function
-            self.submit_fn = _netcat_submitter
-        
-        elif sub_type == self.CCIT_TY:
-            # init submitter keywords
-            self.SUB_ACCEPTED      = 'accepted'
-            self.SUB_INVALID       = 'invalid'
-            self.SUB_OLD           = 'too old'
-            self.SUB_YOUR_OWN      = 'your own'
-            self.SUB_STOLEN        = 'already stolen'
-            self.SUB_NOP           = 'from NOP team'
-            self.SUB_NOT_AVAILABLE = 'is not available'
-            
-            # select submit function
-            self.submit_fn = _http_submitter
-            
-            
-        elif sub_type == self.ENOWAR_TY:
-            # init submitter keywords
-            self.SUB_ACCEPTED      = 'OK'
-            self.SUB_INVALID       = 'INV'
-            self.SUB_OLD           = 'OLD'
-            self.SUB_YOUR_OWN      = 'OWN'
-            self.SUB_STOLEN        = 'DUP'
-            self.SUB_NOP           = 'INV'
-            self.SUB_NOT_AVAILABLE = 'ERR'
-            # select submit function
-            self.submit_fn = _netcat_submitter
-            
-        elif sub_type == self.NC_C_TY or ub_type == self.HTTP_C_TY:
-            # init submitter keywords
-            self.SUB_ACCEPTED      = self.keywords['SUB_ACCEPTED']
-            self.SUB_INVALID       = self.keywords['SUB_INVALID']
-            self.SUB_OLD           = self.keywords['SUB_OLD']
-            self.SUB_YOUR_OWN      = self.keywords['SUB_YOUR_OWN']
-            self.SUB_STOLEN        = self.keywords['SUB_STOLEN']
-            self.SUB_NOP           = self.keywords['SUB_NOP']
-            self.SUB_NOT_AVAILABLE = self.keywords['SUB_NOT_AVAILABLE']
-            
-            # select submit function
-            self.submit_fn = self.CUSTOM_SUBMITTER_FUNCTION
-            if self.CUSTOM_SUBMITTER_FUNCTION is not None:
-                return 
-            	
-            self.submit_fn = _http_submitter
-            if sub_type == self.NC_C_TY:
-                self.submit_fn = _netcat_submitter
-            
-            
-    def submit(self, flags):
-    	# [{'flag':'<flag>','msg':'<server response msg>'},{...},...]
-        return self.submit_fn(self, flags)
-    
-    def _netcat_submitter(self, flags):
+
+    def netcat_submitter(self, flags):
         try:
-            sub = pwn.remote(self.host, self.port, timeout=current_app.config['SUB_TIMEOUT'])
+            print(f' {self.host} {self.port}')
+            sub = remote(self.host, self.port, timeout=current_app.config['SUB_TIMEOUT'])
+            
             while sub.recv(1,timeout=1):
                 continue
             res = []
@@ -144,7 +70,7 @@ class Submitter:
             print(ex)
             return []
     
-    def _http_submitter(self, flags):
+    def http_submitter(self, flags):
         res = requests.put(current_app.config['SUB_URL'],
                             headers={'X-Team-Token': current_app.config['TEAM_TOKEN']},
                             json=flags,
@@ -155,7 +81,88 @@ class Submitter:
             return json.loads(res.text)
         else:
             current_app.logger.error(f'Received this response from the gameserver:\n\n{res.text}\n')
-            return []    
+            return []  
+      
+    def __init__(self, app_configs, sub_type, sub_fun=None ,keywords={}):
+        sub_type_implemented = [self.FAUST_TY, self.CCIT_TY, self.ENOWAR_TY, self.HTTP_C_TY, self.NC_C_TY]
+        self.keywords = keywords
+        self.CUSTOM_SUBMITTER_FUNCTION = sub_fun
+        if sub_type not in sub_type_implemented:
+            raise NotImplementedError()
+        
+        # init submitter data
+        url = urllib.parse.urlsplit(app_configs['SUB_URL'])
+        self.host = url.hostname
+        self.port = url.port
+        print(f'{self.host}, {self.port}') 
+        
+        if sub_type == self.FAUST_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = 'OK'
+            self.SUB_INVALID       = 'INV'
+            self.SUB_OLD           = 'OLD'
+            self.SUB_YOUR_OWN      = 'OWN'
+            self.SUB_STOLEN        = 'DUP'
+            self.SUB_NOP           = 'INV'
+            self.SUB_NOT_AVAILABLE = 'ERR'  
+            
+            # select submit function
+            self.submit_fn = self.netcat_submitter
+        
+        elif sub_type == self.CCIT_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = 'accepted'
+            self.SUB_INVALID       = 'invalid'
+            self.SUB_OLD           = 'too old'
+            self.SUB_YOUR_OWN      = 'your own'
+            self.SUB_STOLEN        = 'already stolen'
+            self.SUB_NOP           = 'from NOP team'
+            self.SUB_NOT_AVAILABLE = 'is not available'
+            
+            # select submit function
+            self.submit_fn = self.http_submitter
+            
+            
+        elif sub_type == self.ENOWAR_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = 'OK'
+            self.SUB_INVALID       = 'INV'
+            self.SUB_OLD           = 'OLD'
+            self.SUB_YOUR_OWN      = 'OWN'
+            self.SUB_STOLEN        = 'DUP'
+            self.SUB_NOP           = 'INV'
+            self.SUB_NOT_AVAILABLE = 'ERR'
+            # select submit function
+            self.submit_fn = self.netcat_submitter
+            
+        elif sub_type == self.NC_C_TY or ub_type == self.HTTP_C_TY:
+            # init submitter keywords
+            self.SUB_ACCEPTED      = self.keywords['SUB_ACCEPTED']
+            self.SUB_INVALID       = self.keywords['SUB_INVALID']
+            self.SUB_OLD           = self.keywords['SUB_OLD']
+            self.SUB_YOUR_OWN      = self.keywords['SUB_YOUR_OWN']
+            self.SUB_STOLEN        = self.keywords['SUB_STOLEN']
+            self.SUB_NOP           = self.keywords['SUB_NOP']
+            self.SUB_NOT_AVAILABLE = self.keywords['SUB_NOT_AVAILABLE']
+            
+            # select submit function
+            self.submit_fn = self.CUSTOM_SUBMITTER_FUNCTION
+            if self.CUSTOM_SUBMITTER_FUNCTION is not None:
+                print(f'submitter_name {self.submit_fn.__name__}')
+                return 
+            	
+            self.submit_fn = self.http_submitter
+            if sub_type == self.NC_C_TY:
+                self.submit_fn = self.netcat_submitter
+        
+        print(f'submitter_name {self.submit_fn.__name__}')
+            
+    def submit(self, flags):
+        print('STO SUB')
+    	# [{'flag':'<flag>','msg':'<server response msg>'},{...},...]
+        return self.submit_fn(flags)
+    
+  
     
     
     
@@ -168,9 +175,12 @@ def loop(app: Flask):
         database = db.get_db()
         queue = OrderedSetQueue()
         
-        submitter = Submitter(current_app.config['SUB_TYPE'])
+        submitter = Submitter(current_app.config, current_app.config['SUB_TYPE'])
+        
+        logger.info('submitter-class ok')
         
         while True:
+            
             s_time = time.time()
             expiration_time = (datetime.now() - timedelta(seconds=current_app.config['FLAG_ALIVE'])).replace(microsecond=0).isoformat(sep=' ')
             cursor = database.cursor()
@@ -191,11 +201,12 @@ def loop(app: Flask):
                     flags = []
                     for _ in range(min(current_app.config['SUB_PAYLOAD_SIZE'], queue_length)):
                         flags.append(queue.get())
-
+                    print(flags)
+                    
                     if 'custom' in current_app.config['SUB_TYPE']:
-                        submit_result = submit(flags, sub_fun=current_app.config['CUSTOM_SUBMITTER_FUNCTION']  ,keywords=current_app.config['CUSTOM_KEYWORDS'])
+                        submit_result = submitter.submit(flags, sub_fun=current_app.config['CUSTOM_SUBMITTER_FUNCTION']  ,keywords=current_app.config['CUSTOM_KEYWORDS'])
                     else:
-                        submit_result = submit(flags)
+                        submit_result = submitter.submit(flags)
                     # executemany() would be better, but it's fine like this.
                     for item in submit_result:
                         if (submitter.SUB_INVALID.lower() in item['msg'].lower() or

@@ -7,15 +7,15 @@ class Config(object):
     TEAMS = ['10.60.{}.1'.format(i) for i in range(1, 35)]
     TEAMS.remove(YOUR_TEAM)
 
-    ROUND_DURATION = 120
-    FLAG_ALIVE = 5 * ROUND_DURATION
-    FLAG_FORMAT = r'[A-Z0-9]{31}='
+    ROUND_DURATION = 10
+    FLAG_ALIVE = 5000000 * ROUND_DURATION
+    FLAG_FORMAT = r'FAUST_[A-Za-z0-9/+]{32}'
 
     SUB_LIMIT = 1
     SUB_INTERVAL = 5
     SUB_TIMEOUT = SUB_INTERVAL / SUB_LIMIT
     SUB_PAYLOAD_SIZE = 100
-    SUB_URL = 'tcp://10.0.13.37:1337' # 'http://10.1.0.2/flags' 'tcp://submission.faustctf.net:666/'
+    SUB_URL = 'tcp://0.0.0.0:9090'#'tcp://10.0.13.37:1337' # 'http://10.1.0.2/flags' 'tcp://submission.faustctf.net:666/'
 
     SUB_TYPE = 'enowar' # enowar | faust | ccit | custom-http | custom-nc 
     
