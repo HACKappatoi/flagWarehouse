@@ -20,7 +20,8 @@ BANNER = '''
 .'  _|  |.---.-.-----.|  |  |  |.---.-.----.-----.|  |--.-----.--.--.-----.-----.
 |   _|  ||  _  |  _  ||  |  |  ||  _  |   _|  -__||     |  _  |  |  |__ --|  -__|
 |__| |__||___._|___  ||________||___._|__| |_____||__|__|_____|_____|_____|_____|
-               |_____|                                                           
+               |_____| HACKAPPAVERSION-0.1
+                                                                        
                
           The perfect solution for running all your exploits in one go!          
 
@@ -154,6 +155,8 @@ def main(args):
 
             if scripts:
                 logging.info(f'Starting new round. Running {len(scripts)} exploits.')
+                for script in scripts:
+                    logging.info(f'{script}, Executable: {os.access(script, os.X_OK)}')
             else:
                 logging.info('No exploits found: retrying in 15 seconds')
                 time.sleep(15)
