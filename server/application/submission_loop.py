@@ -135,7 +135,7 @@ class Submitter:
             # select submit function
             self.submit_fn = self.netcat_submitter
             
-        elif sub_type == self.NC_C_TY or sub_type == self.HTTP_C_TY:
+        elif sub_type in { self.NC_C_TY , self.HTTP_C_TY}:
             # init submitter keywords
             self.SUB_ACCEPTED      = self.keywords['SUB_ACCEPTED']
             self.SUB_INVALID       = self.keywords['SUB_INVALID']
